@@ -1,0 +1,40 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "mycar-f0673",
+          "appId": "1:190006855391:android:e82059c1e2fb9ba39f0b6a",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "mycar-f0673",
+          "configurations": {
+            "android": "1:190006855391:android:e82059c1e2fb9ba39f0b6a",
+            "ios": "1:190006855391:ios:6dc993326dcde9099f0b6a",
+            "web": "1:190006855391:web:79e72a62eebee2289f0b6a"
+          }
+        }
+      }
+    }
+  },
+  "storage": {"rules": "storage.rules"},
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "functions": [
+    {
+      "ignore": [
+        "node_modules",
+        ".git",
+        "*.log",
+        "*.test.js"
+      ],
+      "source": "functions",
+      "codebase": "default"
+    }
+  ]
+}
+

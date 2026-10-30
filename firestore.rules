@@ -1,0 +1,197 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function owner(uid) { return request.auth != null && request.auth.uid == uid; }
+    function validVehicle(data) {
+      return data.keys().hasAll(['brand', 'model', 'year', 'plate', 'fuelType', 'transmission', 'engineCc', 'currentKm', 'archived', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['brand', 'model', 'year', 'plate', 'fuelType', 'transmission', 'engineCc', 'currentKm', 'archived', 'createdAt', 'updatedAt', 'baselineKm', 'recordMaxKm', 'activityRevision'])
+        && (!('baselineKm' in data) || (data.baselineKm is int && data.baselineKm >= 0 && data.baselineKm <= data.currentKm))
+        && (!('recordMaxKm' in data) || (data.recordMaxKm is int && data.recordMaxKm >= 0 && data.recordMaxKm <= data.currentKm))
+        && (!('activityRevision' in data) || (data.activityRevision is int && data.activityRevision >= 0))
+        && data.brand is string && data.brand.size() > 0 && data.brand.size() <= 80
+        && data.model is string && data.model.size() > 0 && data.model.size() <= 80
+        && data.plate is string && data.plate.size() >= 3 && data.plate.size() <= 20
+        && data.year is int && data.year >= 1900 && data.year <= 2100
+        && data.engineCc is int && data.engineCc >= 0 && data.engineCc <= 20000
+        && data.currentKm is int && data.currentKm >= 0 && data.currentKm <= 10000000
+        && data.fuelType in ['Benzin', 'Dizel', 'LPG', 'Hibrit', 'Elektrik']
+        && data.transmission in ['Otomatik', 'Manuel', 'Yarı otomatik']
+        && data.archived is bool && data.createdAt is timestamp
+        && data.updatedAt == request.time;
+    }
+    function validActive(uid) {
+      let id = request.resource.data.activeVehicleId;
+      return id == null || (id is string && id.size() > 0 && id.size() <= 128
+        && existsAfter(/databases/$(database)/documents/users/$(uid)/vehicles/$(id))
+        && getAfter(/databases/$(database)/documents/users/$(uid)/vehicles/$(id)).data.archived == false);
+    }
+    function validRecord(data) {
+      return data.keys().hasAll(['kind', 'date', 'odometerKm', 'amountKurus', 'category', 'litersMilli', 'fullTank', 'fuelType', 'notes', 'archived', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['kind', 'date', 'odometerKm', 'amountKurus', 'category', 'litersMilli', 'fullTank', 'fuelType', 'notes', 'archived', 'createdAt', 'updatedAt'])
+        && data.kind in ['fuel', 'expense'] && data.date is timestamp && data.date <= request.time
+        && data.odometerKm is int && data.odometerKm >= 0 && data.odometerKm <= 10000000
+        && data.amountKurus is int && data.amountKurus > 0 && data.amountKurus <= 100000000
+        && data.notes is string && data.notes.size() <= 1000
+        && data.archived is bool && data.fullTank is bool && data.createdAt is timestamp && data.updatedAt == request.time
+        && ((data.kind == 'fuel' && data.category == 'Yakıt' && data.litersMilli is int && data.litersMilli > 0 && data.litersMilli <= 1000000
+              && data.fuelType in ['Benzin', 'Dizel', 'LPG', 'Hibrit'])
+          || (data.kind == 'expense' && data.category in ['Bakım', 'Tamir', 'Lastik', 'Sigorta', 'Kasko', 'Muayene', 'Otopark', 'Yıkama', 'Diğer']
+              && data.litersMilli == 0 && data.fuelType == '' && data.fullTank == false));
+    }
+    function recordParentValid(uid, vehicleId) {
+      let path = /databases/$(database)/documents/users/$(uid)/vehicles/$(vehicleId);
+      let before = get(path).data;
+      let after = getAfter(path).data;
+      return before.archived == false && after.archived == false
+        && after.activityRevision == before.get('activityRevision', 0) + 1
+        && (request.resource.data.archived || after.currentKm >= request.resource.data.odometerKm);
+    }
+    match /users/{uid} {
+      allow read: if owner(uid);
+      allow create: if owner(uid) && request.resource.data.keys().hasOnly(['activeVehicleId']) && validActive(uid);
+      allow update: if owner(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeVehicleId']) && validActive(uid);
+      match /vehicles/{vehicleId} {
+        match /policies/{policyId} {
+          function validPolicy(data) {
+            return data.keys().hasAll(['kind', 'company', 'number', 'startDate', 'endDate', 'premiumKurus', 'level', 'step', 'notes', 'archived', 'createdAt', 'updatedAt'])
+              && data.keys().hasOnly(['kind', 'company', 'number', 'startDate', 'endDate', 'premiumKurus', 'level', 'step', 'notes', 'archived', 'createdAt', 'updatedAt'])
+              && data.kind in ['traffic', 'casco']
+              && data.company is string && data.company.size() > 0 && data.company.size() <= 100
+              && data.number is string && data.number.size() > 0 && data.number.size() <= 100
+              && data.startDate is timestamp && data.startDate >= timestamp.date(1900, 1, 1)
+              && data.endDate is timestamp && data.endDate > data.startDate && data.endDate <= timestamp.date(2100, 12, 31)
+              && data.premiumKurus is int && data.premiumKurus > 0 && data.premiumKurus <= 100000000
+              && data.notes is string && data.notes.size() <= 1000
+              && data.archived is bool && data.createdAt is timestamp && data.updatedAt == request.time
+              && ((data.kind == 'traffic' && data.level == '' && (data.step == null || (data.step is int && data.step >= 0 && data.step <= 8)))
+                || (data.kind == 'casco' && data.level in ['Dar Kasko', 'Kasko', 'Genişletilmiş Kasko', 'Tam Kasko'] && data.step == null));
+          }
+          function policyParentActive() { return get(/databases/$(database)/documents/users/$(uid)/vehicles/$(vehicleId)).data.archived == false; }
+          allow read: if owner(uid);
+          allow create: if owner(uid) && policyParentActive() && validPolicy(request.resource.data) && request.resource.data.createdAt == request.time && !request.resource.data.archived;
+          allow update: if owner(uid) && policyParentActive() && validPolicy(request.resource.data) && request.resource.data.createdAt == resource.data.createdAt;
+          allow delete: if false;
+        }
+        match /parking/{parkingId} {
+          function validParking(data) {
+            return data.keys().hasAll(['indoor', 'active', 'savedAt', 'latitude', 'longitude', 'accuracy', 'floor', 'section', 'space', 'notes', 'updatedAt'])
+              && data.keys().hasOnly(['indoor', 'active', 'savedAt', 'latitude', 'longitude', 'accuracy', 'floor', 'section', 'space', 'notes', 'updatedAt'])
+              && data.updatedAt == request.time
+              && validParkingFields(data);
+          }
+          function validParkingFields(data) {
+            return data.indoor is bool && data.active is bool && data.savedAt is timestamp && data.savedAt <= request.time
+              && data.floor is string && data.floor.size() <= 30
+              && data.section is string && data.section.size() <= 30
+              && data.space is string && data.space.size() <= 30
+              && data.notes is string && data.notes.size() <= 500
+              && ((data.indoor && data.floor.size() > 0 && data.section.size() > 0 && ((data.latitude == null && data.longitude == null && data.accuracy == null) || validParkingCoordinates(data)))
+                || (!data.indoor && data.floor == '' && data.section == '' && data.space == ''
+                  && validParkingCoordinates(data)));
+          }
+          function validParkingCoordinates(data) {
+            return data.latitude is number && data.latitude >= -90 && data.latitude <= 90
+              && data.longitude is number && data.longitude >= -180 && data.longitude <= 180
+              && data.accuracy is number && data.accuracy >= 0 && data.accuracy <= 100000;
+          }
+          function validHistory(data) {
+            let currentPath = /databases/$(database)/documents/users/$(uid)/vehicles/$(vehicleId)/parking/current;
+            let historyPath = /databases/$(database)/documents/users/$(uid)/vehicles/$(vehicleId)/parking/history;
+            let current = get(currentPath).data;
+            let old = exists(historyPath) ? get(historyPath).data.entries : [];
+            return data.keys().hasAll(['entries', 'updatedAt']) && data.keys().hasOnly(['entries', 'updatedAt'])
+              && data.updatedAt == request.time && data.entries is list && data.entries.size() <= 5
+              && data.entries.size() == (old.size() < 5 ? old.size() + 1 : 5)
+              && current.active && !getAfter(currentPath).data.active
+              && data.entries[0].keys().hasAll(['indoor', 'active', 'savedAt', 'latitude', 'longitude', 'accuracy', 'floor', 'section', 'space', 'notes'])
+              && data.entries[0].keys().hasOnly(['indoor', 'active', 'savedAt', 'latitude', 'longitude', 'accuracy', 'floor', 'section', 'space', 'notes'])
+              && !data.entries[0].active && data.entries[0].diff(current).affectedKeys().hasOnly(['active', 'updatedAt'])
+              && (data.entries.size() < 2 || data.entries[1] == old[0])
+              && (data.entries.size() < 3 || data.entries[2] == old[1])
+              && (data.entries.size() < 4 || data.entries[3] == old[2])
+              && (data.entries.size() < 5 || data.entries[4] == old[3]);
+          }
+          function parkingParentActive() { return get(/databases/$(database)/documents/users/$(uid)/vehicles/$(vehicleId)).data.archived == false; }
+          allow read: if owner(uid) && parkingId in ['current', 'history'];
+          allow create, update: if owner(uid) && parkingId == 'history' && parkingParentActive() && validHistory(request.resource.data);
+          allow create: if owner(uid) && parkingId == 'current' && parkingParentActive() && validParking(request.resource.data)
+            && request.resource.data.savedAt == request.time && request.resource.data.active;
+          allow update: if owner(uid) && parkingId == 'current' && parkingParentActive() && validParking(request.resource.data)
+            && ((request.resource.data.active && request.resource.data.savedAt == request.time)
+              || (!request.resource.data.active && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active', 'updatedAt'])));
+          allow delete: if false;
+        }
+        match /inspection/{inspectionId} {
+          function validInspection(data) {
+            return data.keys().hasAll(['lastDate', 'nextDate', 'intervalYears', 'notes', 'createdAt', 'updatedAt'])
+              && data.keys().hasOnly(['lastDate', 'nextDate', 'intervalYears', 'notes', 'createdAt', 'updatedAt'])
+              && data.lastDate is timestamp && data.lastDate <= request.time + duration.value(1, 'd')
+              && data.nextDate is timestamp && data.intervalYears is int && data.intervalYears >= 1 && data.intervalYears <= 5
+              && data.nextDate >= data.lastDate + duration.value(data.intervalYears * 365, 'd')
+              && data.nextDate <= data.lastDate + duration.value(data.intervalYears * 366, 'd')
+              && data.notes is string && data.notes.size() <= 1000 && data.createdAt is timestamp && data.updatedAt == request.time;
+          }
+          function inspectionParentActive() { return get(/databases/$(database)/documents/users/$(uid)/vehicles/$(vehicleId)).data.archived == false; }
+          allow read: if owner(uid) && inspectionId == 'current';
+          allow create: if owner(uid) && inspectionId == 'current' && inspectionParentActive() && validInspection(request.resource.data) && request.resource.data.createdAt == request.time;
+          allow update: if owner(uid) && inspectionId == 'current' && inspectionParentActive() && validInspection(request.resource.data) && request.resource.data.createdAt == resource.data.createdAt;
+        }
+        match /expertise/{entryId} {
+          function validExpertise(data) {
+            return data.keys().hasAll(['parts','notes','reportId','reportName','createdAt','updatedAt'])
+              && data.keys().hasOnly(['parts','notes','reportId','reportName','createdAt','updatedAt'])
+              && get(/databases/$(database)/documents/users/$(uid)/vehicles/$(vehicleId)).data.archived == false
+              && data.parts is map && data.parts.size() == 13
+              && data.parts.keys().hasOnly(['front_bumper','hood','roof','trunk','rear_bumper','left_front_wing','right_front_wing','left_front_door','right_front_door','left_rear_door','right_rear_door','left_rear_wing','right_rear_wing'])
+              && data.parts.values().hasOnly(['unknown','original','painted','local_paint','replaced','damaged'])
+              && data.notes is string && data.notes.size() <= 2000
+              && data.reportId is string && data.reportName is string && data.reportName.size() <= 200
+              && ((data.reportId == '' && data.reportName == '') || (data.reportId.matches('[a-zA-Z0-9_-]{1,80}') && data.reportName.size() > 0))
+              && data.createdAt is timestamp && data.updatedAt == request.time;
+          }
+          allow read: if owner(uid) && entryId == 'current';
+          allow create: if owner(uid) && entryId == 'current' && validExpertise(request.resource.data) && request.resource.data.createdAt == request.time;
+          allow update: if owner(uid) && entryId == 'current' && validExpertise(request.resource.data) && request.resource.data.createdAt == resource.data.createdAt;
+          allow delete: if false;
+        }
+        match /maintenance/{entryId} {
+          function validMaintenance(data) {
+            let vehicle = get(/databases/$(database)/documents/users/$(uid)/vehicles/$(vehicleId)).data;
+            return vehicle.archived == false
+              && data.keys().hasAll(['date', 'odometerKm', 'intervalKm', 'amountKurus', 'items', 'details', 'service', 'notes', 'createdAt', 'updatedAt'])
+              && data.keys().hasOnly(['date', 'odometerKm', 'intervalKm', 'intervalMonths', 'amountKurus', 'items', 'details', 'service', 'notes', 'createdAt', 'updatedAt'])
+              && (!('intervalMonths' in data) || (data.intervalMonths is int && data.intervalMonths >= 1 && data.intervalMonths <= 60))
+              && data.date is timestamp && data.date >= timestamp.date(1900, 1, 1) && data.date <= request.time + duration.value(1, 'd')
+              && data.odometerKm is int && data.odometerKm >= 0 && data.odometerKm <= vehicle.currentKm
+              && data.intervalKm is int && data.intervalKm >= 1000 && data.intervalKm <= 100000
+              && data.amountKurus is int && data.amountKurus >= 0 && data.amountKurus <= 100000000
+              && data.items is list && data.items.size() <= 13 && data.items.toSet().size() == data.items.size()
+              && data.items.hasOnly(['engine_oil', 'oil_filter', 'air_filter', 'cabin_filter', 'fuel_filter', 'spark_plugs', 'brake_pads', 'brake_fluid', 'coolant', 'transmission_oil', 'timing_belt', 'battery', 'tires'])
+              && data.details is string && data.details.size() <= 2000 && (data.items.size() > 0 || data.details.size() > 0)
+              && data['service'] is string && data['service'].size() <= 120 && data.notes is string && data.notes.size() <= 1000
+              && data.createdAt is timestamp && data.updatedAt == request.time;
+          }
+          allow read: if owner(uid);
+          allow create: if owner(uid) && validMaintenance(request.resource.data) && request.resource.data.createdAt == request.time;
+          allow update: if owner(uid) && validMaintenance(request.resource.data) && request.resource.data.createdAt == resource.data.createdAt;
+          allow delete: if false;
+        }
+        allow read: if owner(uid);
+        allow create: if owner(uid) && validVehicle(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.archived == false;
+        allow update: if owner(uid) && validVehicle(request.resource.data) && request.resource.data.createdAt == resource.data.createdAt;
+        // Kalıcı silme yok: geçmişi koruyan arşivleme kullanılır.
+        allow delete: if false;
+        match /activityRecords/{recordId} {
+          allow read: if owner(uid);
+          allow create: if owner(uid) && validRecord(request.resource.data) && recordParentValid(uid, vehicleId)
+            && request.resource.data.createdAt == request.time && request.resource.data.archived == false;
+          allow update: if owner(uid) && validRecord(request.resource.data) && recordParentValid(uid, vehicleId)
+            && request.resource.data.createdAt == resource.data.createdAt && request.resource.data.kind == resource.data.kind;
+          allow delete: if false;
+        }
+      }
+    }
+  }
+}
+
+

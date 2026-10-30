@@ -1,0 +1,14 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /users/{uid}/vehicles/{vehicleId}/expertise/{fileName} {
+      function owner() { return request.auth != null && request.auth.uid == uid; }
+      function activeVehicle() { return firestore.get(/databases/(default)/documents/users/$(uid)/vehicles/$(vehicleId)).data.archived == false; }
+      allow read: if owner();
+      allow create: if resource == null && owner() && activeVehicle() && fileName.matches('[a-zA-Z0-9_-]{1,80}[.]pdf') && request.resource.size > 0 && request.resource.size <= 10 * 1024 * 1024 && request.resource.contentType == 'application/pdf';
+      allow delete: if owner();
+      allow update: if false;
+    }
+  }
+}
+
