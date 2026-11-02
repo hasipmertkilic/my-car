@@ -368,7 +368,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                       ),
                       Text(
-                        '0.2.26',
+                        '0.2.28',
                         style: theme.textTheme.labelMedium?.copyWith(
                           color: colors.onSurfaceVariant,
                         ),

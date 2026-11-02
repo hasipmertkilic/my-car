@@ -16,20 +16,39 @@ final firebaseAvailabilityProvider = Provider<FirebaseAvailability>(
   ),
 );
 
-// Gerçek MyCar projesinin platform seçenekleri FlutterFire tarafından üretilir.
+// Android already initializes the default app from google-services.json.
+// Reuse that configuration instead of supplying a second set of Dart options.
+FirebaseOptions? firebaseStartupOptions({
+  required bool web,
+  required TargetPlatform platform,
+}) {
+  if (!web && platform == TargetPlatform.android) return null;
+  if (web) return DefaultFirebaseOptions.web;
+  return DefaultFirebaseOptions.currentPlatform;
+}
+
+String firebaseStartupError(Object error) {
+  if (error is FirebaseException &&
+      RegExp(r'^[a-zA-Z0-9_-]{1,64}$').hasMatch(error.code)) {
+    return 'Firebase bağlantısı başlatılamadı. Uygulamayı yeniden aç. '
+        'Sorun sürerse hata kodunu paylaş: ${error.code}';
+  }
+  return 'Firebase başlatılamadı. Uygulamayı yeniden açıp tekrar dene.';
+}
+
 Future<FirebaseAvailability> initializeFirebase() async {
   try {
     await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
+      options: firebaseStartupOptions(
+        web: kIsWeb,
+        platform: defaultTargetPlatform,
+      ),
     );
     if (kIsWeb) {
       await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
     }
     return const FirebaseAvailability();
-  } catch (_) {
-    return const FirebaseAvailability(
-      error:
-          'Firebase başlatılamadı. Bağlantı yapılandırmasını kontrol edip uygulamayı yeniden aç.',
-    );
+  } catch (error) {
+    return FirebaseAvailability(error: firebaseStartupError(error));
   }
 }

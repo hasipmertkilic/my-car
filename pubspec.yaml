@@ -1,7 +1,7 @@
 name: my_car
 description: Türkçe kişisel araç yönetim uygulaması.
 publish_to: 'none'
-version: 0.2.26+32
+version: 0.2.28+34
 environment:
   sdk: ^3.12.2
 dependencies:

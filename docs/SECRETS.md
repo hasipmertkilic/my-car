@@ -27,3 +27,5 @@ GitHub'a gönderilmiş eski commit'lerdeki yapılandırma, yeni commit ile silin
 Kontrol: `node tool/check_secrets.cjs`. Anahtar değerleri ekrana yazılmaz; yalnızca dosya ve satır bildirilir. Taramada Git'e eklenecek dosyalar kontrol edilir; tüm Git geçmişi veya bulut ayarları denetlenmez.
 
 Kaynaklar: https://firebase.google.com/docs/projects/api-keys ve https://developers.google.com/maps/api-security-best-practices
+
+Android başlangıcı artık google-services.json dosyasından gelen yerel Firebase ayarını kullanır; Android APK derlemesinde Firebase Dart define anahtarları gerekmez. Web Firebase anahtarı için dart-define-from-file kullanımı devam eder.
