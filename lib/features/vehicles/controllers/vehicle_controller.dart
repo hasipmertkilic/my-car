@@ -4,6 +4,7 @@ import '../../auth/controllers/auth_controller.dart';
 import '../../auth/models/app_user.dart';
 import '../models/vehicle.dart';
 import '../repositories/vehicle_repository.dart';
+import '../../records/controllers/activity_controller.dart';
 
 final signedInUserProvider = StreamProvider<AppUser?>(
   (ref) => ref.watch(authRepositoryProvider).watchUser(),
@@ -14,11 +15,36 @@ final vehicleRepositoryProvider = Provider<VehicleRepository?>((ref) {
       ? null
       : FirestoreVehicleRepository(FirebaseFirestore.instance, uid);
 });
-final vehiclesProvider = StreamProvider<List<Vehicle>>(
-  retry: (_, _) => null,
-  (ref) =>
-      ref.watch(vehicleRepositoryProvider)?.watchVehicles() ?? Stream.value([]),
-);
+final vehiclesProvider = StreamProvider<List<Vehicle>>(retry: (_, _) => null, (
+  ref,
+) {
+  final pending =
+      ref.watch(offlineRecordStateProvider).asData?.value?.pending ?? [];
+  return ref
+          .watch(vehicleRepositoryProvider)
+          ?.watchVehicles()
+          .map(
+            (vehicles) => vehicles.map((vehicle) {
+              final km = pending
+                  .where(
+                    (op) => op.vehicleId == vehicle.id && op.archived != true,
+                  )
+                  .fold<int>(
+                    vehicle.currentKm,
+                    (value, op) => op.record.odometerKm > value
+                        ? op.record.odometerKm
+                        : value,
+                  );
+              return km == vehicle.currentKm
+                  ? vehicle
+                  : Vehicle.fromMap(vehicle.id, {
+                      ...vehicle.toMap(),
+                      'currentKm': km,
+                    });
+            }).toList(),
+          ) ??
+      Stream.value([]);
+});
 final activeVehicleIdProvider = StreamProvider<String?>(
   retry: (_, _) => null,
   (ref) =>

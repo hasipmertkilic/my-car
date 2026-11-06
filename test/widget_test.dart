@@ -15,21 +15,37 @@ import 'support/fake_vehicle_repository.dart';
 import 'package:my_car/features/vehicles/controllers/vehicle_controller.dart';
 import 'package:my_car/core/widgets/metric_card.dart';
 import 'package:my_car/features/maintenance/maintenance_repository.dart';
+import 'package:my_car/features/journeys/journey_service.dart';
+import 'package:my_car/features/journeys/eds_data.dart';
+import 'package:my_car/features/journeys/eds_section.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:my_car/features/records/repositories/activity_repository.dart';
 
 Widget authenticatedApp({
   FakeVehicleRepository? vehicles,
   MaintenanceRepository? maintenance,
   ExpertiseRepository? expertise,
   ReminderManager? reminders,
+  JourneyService? journeys,
+  EdsDataset? eds,
+  ActivityRepository? activities,
 }) => ProviderScope(
   overrides: [
+    if (eds != null) edsDatasetProvider.overrideWith((ref) async => eds),
+    if (eds != null)
+      edsCameraIconProvider.overrideWith(
+        (ref) async => BitmapDescriptor.defaultMarker,
+      ),
+    if (journeys != null) journeyServiceProvider.overrideWithValue(journeys),
     if (expertise != null)
       expertiseRepositoryProvider.overrideWithValue(expertise),
     if (reminders != null) reminderManagerProvider.overrideWithValue(reminders),
     if (maintenance != null)
       maintenanceRepositoryProvider.overrideWithValue(maintenance),
     inspectionRepositoryProvider.overrideWithValue(FakeInspectionRepository()),
-    activityRepositoryProvider.overrideWithValue(FakeActivityRepository()),
+    activityRepositoryProvider.overrideWithValue(
+      activities ?? FakeActivityRepository(),
+    ),
     vehicleRepositoryProvider.overrideWithValue(
       vehicles ?? FakeVehicleRepository(seed: testVehicles),
     ),
@@ -123,7 +139,10 @@ void main() {
         200,
         scrollable: drawerScroll,
       );
-      await tester.drag(find.byType(ListView), const Offset(0, -250));
+      await Scrollable.ensureVisible(
+        tester.element(find.text('Sigorta ve kasko poliçeleri')),
+        alignment: .5,
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('Sigorta ve kasko poliçeleri'));
       await tester.pumpAndSettle();
@@ -137,7 +156,7 @@ void main() {
     await tester.pumpWidget(authenticatedApp());
     await tester.pumpAndSettle();
     expect(find.text('BMW 320i'), findsOneWidget);
-    expect(find.textContaining('kişisel hesabına kaydedilir'), findsOneWidget);
+    expect(find.text('ARAÇ PROFİLİ'), findsOneWidget);
     await tester.tap(find.text('Garaj'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Bu aracı seç'));
@@ -152,7 +171,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('Renault Clio'), findsOneWidget);
     expect(find.text('Henüz işlem kaydı yok.'), findsOneWidget);
-    await tester.tap(find.text('İstatistikler'));
+    await tester.tap(find.text('Analiz'));
     await tester.pumpAndSettle();
     expect(find.text('Güncel kilometre'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -162,7 +181,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Ayarlar'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Koyu tema'));
+    await tester.tap(find.text('Sistem ayarı'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Açık tema').last);
     await tester.pumpAndSettle();
@@ -172,7 +191,7 @@ void main() {
     );
     await tester.tap(find.byTooltip('Geri'));
     await tester.pumpAndSettle();
-    expect(find.text('Yola hazır mısın?'), findsOneWidget);
+    expect(find.text('Kontrol sende.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
   testWidgets('Dar ekranda büyük yazı ile özet taşmaz', (tester) async {

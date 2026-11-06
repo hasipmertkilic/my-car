@@ -32,7 +32,25 @@ test('Bakım geçmişi kullanıcıya özeldir, kilometre ve parçalar doğrulan�
   await assertFails(updateDoc(target, {notes: 'Değişiklik', updatedAt: serverTimestamp()}));
 });
 const projectId = 'demo-mycar';
-const vehicle = () => ({brand: 'BMW', model: '320i', year: 2020, plate: '34 TEST 1', fuelType: 'Benzin', transmission: 'Otomatik', engineCc: 1600, currentKm: 120000, archived: false, createdAt: serverTimestamp(), updatedAt: serverTimestamp()});
+test('Plaka il kodu, harf/rakam grupları ve eski kayıt güncellemeleri korunur', async () => {
+  const db = env.authenticatedContext('alice').firestore();
+  for (const plate of ['01 A 1234', '81 Z 12345', '34 AB 123', '06 CD 1234', '35 ABC 12', '34 ABC 123']) {
+    await assertSucceeds(setDoc(doc(db, 'users/alice/vehicles/plate-valid-' + plate.replaceAll(' ', '')), {...vehicle(), plate}));
+  }
+  for (const plate of ['00 AB 123', '82 ABC 123', '34 TEST 1', '34 ABC 1234',
+    '34 QW 123', '34 AB 000', '34abc123', '34 AB 123!']) {
+    await assertFails(setDoc(doc(db, 'users/alice/vehicles/plate-invalid'), {...vehicle(), plate}));
+  }
+  const legacyPath = 'users/alice/vehicles/plate-legacy';
+  await env.withSecurityRulesDisabled(async context => {
+    await setDoc(doc(context.firestore(), legacyPath), {...vehicle(), plate:'ESKI PLAKA'});
+  });
+  const legacy = doc(db, legacyPath);
+  await assertSucceeds(updateDoc(legacy, {currentKm:120001, updatedAt:serverTimestamp()}));
+  await assertFails(updateDoc(legacy, {plate:'82 AB 123', updatedAt:serverTimestamp()}));
+  await assertSucceeds(updateDoc(legacy, {plate:'34 AB 123', updatedAt:serverTimestamp()}));
+});
+const vehicle = () => ({brand: 'BMW', model: '320i', year: 2020, plate: '34 ABC 123', fuelType: 'Benzin', transmission: 'Otomatik', engineCc: 1600, currentKm: 120000, archived: false, createdAt: serverTimestamp(), updatedAt: serverTimestamp()});
 test('Poliçe sahipliği, basamak/kapsam, tarihler ve arşiv korunur', async () => {
   const db = env.authenticatedContext('alice').firestore();
   const parent = doc(db, 'users/alice/vehicles/policy-car');

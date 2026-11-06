@@ -1,3 +1,5 @@
+import '../features/journeys/journey_screen.dart';
+import '../features/records/screens/offline_sync_screen.dart';
 import '../features/expertise/expertise_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,6 +40,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       return isAuth || path == '/session' ? '/summary' : null;
     },
     routes: [
+      GoRoute(
+        path: '/sync',
+        builder: (context, state) => const OfflineSyncScreen(),
+      ),
+      GoRoute(
+        path: '/journey',
+        builder: (context, state) => const JourneyScreen(),
+      ),
       GoRoute(
         path: '/vehicles/:id/expertise',
         builder: (context, state) =>

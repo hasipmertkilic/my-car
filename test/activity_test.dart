@@ -157,7 +157,7 @@ void main() {
       expect(repository.records['bmw']!.single.amountKurus, 211500);
       expect(repository.records['bmw']!.single.fullTank, isTrue);
       expect(find.text('Benzin alımı'), findsOneWidget);
-      await tap(tester, 'İstatistikler');
+      await tap(tester, 'Analiz');
       expect(find.text('₺2.115,00'), findsWidgets);
     },
   );

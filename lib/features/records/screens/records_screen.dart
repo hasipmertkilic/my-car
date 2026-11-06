@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/page_content.dart';
 import '../../vehicles/widgets/vehicle_scope.dart';
 import '../controllers/activity_controller.dart';
 import '../models/activity_record.dart';
 import '../repositories/activity_repository.dart';
 import '../widgets/activity_scope.dart';
+import '../widgets/activity_card.dart';
 
 class RecordsScreen extends ConsumerStatefulWidget {
   const RecordsScreen({super.key});
@@ -93,7 +93,11 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
             .toList();
         return PageContent(
           children: [
-            SectionTitle('Araç kayıtları', subtitle: vehicle.name),
+            PageHeading(
+              'Kayıt defteri',
+              eyebrow: 'YAKIT VE HARCAMALAR',
+              subtitle: vehicle.name,
+            ),
             Wrap(
               spacing: 10,
               runSpacing: 10,
@@ -116,17 +120,16 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
               ],
             ),
             const SizedBox(height: 20),
-            Wrap(
-              spacing: 8,
-              children: ['Tümü', 'Yakıt', 'Masraf']
-                  .map(
-                    (value) => ChoiceChip(
-                      label: Text(value),
-                      selected: filter == value,
-                      onSelected: (_) => setState(() => filter = value),
-                    ),
-                  )
-                  .toList(),
+            SegmentedButton<String>(
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(value: 'Tümü', label: Text('Tümü')),
+                ButtonSegment(value: 'Yakıt', label: Text('Yakıt')),
+                ButtonSegment(value: 'Masraf', label: Text('Masraf')),
+              ],
+              selected: {filter},
+              onSelectionChanged: (selection) =>
+                  setState(() => filter = selection.single),
             ),
             const SizedBox(height: 20),
             if (records.isEmpty)
@@ -143,64 +146,14 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
                 ),
               ),
             for (final record in records) ...[
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              record.title,
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(Formatters.preciseMoney(record.amount)),
-                        ],
+              ActivityCard(
+                record: record,
+                onEdit: busy
+                    ? null
+                    : () => context.push(
+                        '/vehicles/${vehicle.id}/records/${record.id}/edit',
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '${Formatters.date(record.date)} • ${Formatters.number(record.odometerKm)} km',
-                      ),
-                      if (record.isFuel) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          '${Formatters.number(record.liters)} litre • ${record.fullTank ? 'Dolu depo' : 'Kısmi dolum'}',
-                        ),
-                        Text(
-                          'Litre fiyatı: ${Formatters.preciseMoney(record.pricePerLiter!)}',
-                        ),
-                      ],
-                      if (record.notes.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(record.notes),
-                        ),
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          TextButton(
-                            onPressed: busy
-                                ? null
-                                : () => context.push(
-                                    '/vehicles/${vehicle.id}/records/${record.id}/edit',
-                                  ),
-                            child: const Text('Düzenle'),
-                          ),
-                          TextButton(
-                            onPressed: busy
-                                ? null
-                                : () => remove(vehicle.id, record),
-                            child: const Text('Kaldır'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+                onRemove: busy ? null : () => remove(vehicle.id, record),
               ),
               const SizedBox(height: 12),
             ],

@@ -29,3 +29,5 @@ exports.nearbyStations = onCall({region: 'us-central1', secrets: [placesKey],
   try { return {stations: await searchStations(point, placesKey.value())}; }
   catch (_) { throw new HttpsError('unavailable', 'İstasyon hizmeti kullanılamıyor.'); }
 });
+
+exports.planRoutes = require('./route_function').planRoutes;

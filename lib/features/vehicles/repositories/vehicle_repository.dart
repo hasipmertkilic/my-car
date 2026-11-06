@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/vehicle.dart';
+import '../../../core/utils/turkish_plate.dart';
 
 class VehicleFailure implements Exception {
   const VehicleFailure(this.message);
@@ -55,6 +56,8 @@ class FirestoreVehicleRepository implements VehicleRepository {
   @override
   Future<void> save(Vehicle vehicle) => _run(
     () => db.runTransaction((transaction) async {
+      final plateError = TurkishPlate.validate(vehicle.plate);
+      if (plateError != null) throw VehicleFailure(plateError);
       final target = vehicle.id.isEmpty
           ? vehicles.doc()
           : vehicles.doc(vehicle.id);
@@ -73,6 +76,7 @@ class FirestoreVehicleRepository implements VehicleRepository {
       }
       transaction.set(target, {
         ...vehicle.toMap(),
+        'plate': TurkishPlate.normalize(vehicle.plate),
         'baselineKm': vehicle.currentKm,
         'archived': false,
         'createdAt':
@@ -87,17 +91,17 @@ class FirestoreVehicleRepository implements VehicleRepository {
     }),
   );
   @override
-  Future<void> select(String id) => _run(
-    () => db.runTransaction((transaction) async {
-      final vehicle = await transaction.get(vehicles.doc(id));
-      if (!vehicle.exists || vehicle.data()?['archived'] == true) {
-        throw const VehicleFailure('Araç bulunamadı.');
-      }
-      transaction.set(profile, {
-        'activeVehicleId': id,
-      }, SetOptions(merge: true));
-    }),
-  );
+  Future<void> select(String id) => _run(() async {
+    final vehicle = await vehicles
+        .doc(id)
+        .get(const GetOptions(source: Source.cache));
+    if (!vehicle.exists || vehicle.data()?['archived'] == true) {
+      throw const VehicleFailure('Araç bulunamadı.');
+    }
+    await profile
+        .set({'activeVehicleId': id}, SetOptions(merge: true))
+        .timeout(const Duration(seconds: 2), onTimeout: () {});
+  });
   // Yumuşak silme: araç geçmişi ve gelecekteki belgeler yetim kalmaz.
   // Kullanıcı aynı oturumda geri alabilir; veri kalıcı olarak silinmez.
   @override

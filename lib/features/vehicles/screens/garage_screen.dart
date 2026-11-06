@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/utils/formatters.dart';
+import '../widgets/garage_vehicle_card.dart';
 import '../../../core/widgets/page_content.dart';
 import '../controllers/vehicle_controller.dart';
 import '../models/vehicle.dart';
@@ -86,107 +86,48 @@ class _GarageScreenState extends ConsumerState<GarageScreen> {
       final vehicles = ref.watch(vehiclesProvider).asData!.value;
       return PageContent(
         children: [
-          const SectionTitle(
+          PageHeading(
             'Garajım',
+            eyebrow: 'ARAÇ KOLEKSİYONUN',
             subtitle:
-                'Araçların hesabına kaydedilir ve cihazların arasında güncellenir.',
+                '${vehicles.length} kayıtlı araç • Birini seçerek takibine devam et.',
           ),
           if (vehicles.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(24),
-              child: Text(
-                'Henüz araç eklemedin. İlk aracını aşağıdan ekleyebilirsin.',
-              ),
-            ),
-          for (final vehicle in vehicles) ...[
-            Card(
+            const Card(
               child: Padding(
-                padding: const EdgeInsets.all(20),
+                padding: EdgeInsets.all(30),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.primary.withValues(alpha: .14),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Icon(
-                            Icons.directions_car_rounded,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Text(
-                            vehicle.name,
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text('${vehicle.plate} • ${vehicle.year}'),
-                    const SizedBox(height: 8),
+                    Icon(Icons.garage_outlined, size: 48),
+                    SizedBox(height: 16),
                     Text(
-                      '${Formatters.number(vehicle.currentKm)} km • ${vehicle.fuelType} • ${vehicle.transmission}',
-                    ),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        FilledButton.tonalIcon(
-                          onPressed: busy || vehicle.id == active?.id
-                              ? null
-                              : () => run(
-                                  (repository) => repository.select(vehicle.id),
-                                ),
-                          icon: Icon(
-                            vehicle.id == active?.id
-                                ? Icons.check_circle_outline
-                                : Icons.swap_horiz,
-                          ),
-                          label: Text(
-                            vehicle.id == active?.id
-                                ? 'Aktif araç'
-                                : 'Bu aracı seç',
-                          ),
-                        ),
-                        OutlinedButton(
-                          onPressed: busy
-                              ? null
-                              : () => context.push(
-                                  '/vehicles/${vehicle.id}/edit',
-                                ),
-                          child: const Text('Düzenle'),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: busy
-                              ? null
-                              : () => context.push(
-                                  '/vehicles/${vehicle.id}/policies',
-                                ),
-                          icon: const Icon(Icons.shield_outlined),
-                          label: const Text('Poliçeler'),
-                        ),
-                        TextButton(
-                          onPressed: busy ? null : () => remove(vehicle),
-                          child: const Text('Kaldır'),
-                        ),
-                      ],
+                      'Henüz araç eklemedin. İlk aracını aşağıdan ekleyebilirsin.',
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 14),
+          for (var i = 0; i < vehicles.length; i++) ...[
+            GarageVehicleCard(
+              vehicle: vehicles[i],
+              index: i + 1,
+              active: vehicles[i].id == active?.id,
+              onSelect: busy
+                  ? null
+                  : () =>
+                        run((repository) => repository.select(vehicles[i].id)),
+              onEdit: busy
+                  ? null
+                  : () => context.push('/vehicles/${vehicles[i].id}/edit'),
+              onPolicies: busy
+                  ? null
+                  : () => context.push('/vehicles/${vehicles[i].id}/policies'),
+              onRemove: busy ? null : () => remove(vehicles[i]),
+            ),
+            const SizedBox(height: 16),
           ],
+          const SizedBox(height: 8),
           FilledButton.icon(
             onPressed: busy ? null : () => context.push('/vehicles/new'),
             icon: const Icon(Icons.add),

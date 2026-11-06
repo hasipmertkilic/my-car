@@ -5,10 +5,10 @@ class PageContent extends StatelessWidget {
   final List<Widget> children;
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
-    padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+    padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
     child: Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 900),
+        constraints: const BoxConstraints(maxWidth: 1080),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: children,
@@ -18,34 +18,75 @@ class PageContent extends StatelessWidget {
   );
 }
 
+class PageHeading extends StatelessWidget {
+  const PageHeading(
+    this.title, {
+    super.key,
+    required this.eyebrow,
+    this.subtitle,
+  });
+  final String title, eyebrow;
+  final String? subtitle;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final c = t.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 26),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            eyebrow,
+            style: t.textTheme.labelSmall?.copyWith(
+              letterSpacing: 2,
+              color: c.primary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(title, style: t.textTheme.headlineLarge),
+          if (subtitle != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              subtitle!,
+              style: t.textTheme.bodyMedium?.copyWith(
+                color: c.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class SectionTitle extends StatelessWidget {
   const SectionTitle(this.title, {super.key, this.subtitle});
   final String title;
   final String? subtitle;
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 16),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        if (subtitle != null) ...[
-          const SizedBox(height: 6),
-          Text(
-            subtitle!,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: t.textTheme.titleLarge),
+          if (subtitle != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              subtitle!,
+              style: t.textTheme.bodyMedium?.copyWith(
+                color: t.colorScheme.onSurfaceVariant,
+              ),
             ),
-          ),
+          ],
         ],
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 void showNextStage(BuildContext context, String feature) => showDialog<void>(
@@ -58,7 +99,7 @@ void showNextStage(BuildContext context, String feature) => showDialog<void>(
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Anladım'),
+        child: const Text('Tamam'),
       ),
     ],
   ),

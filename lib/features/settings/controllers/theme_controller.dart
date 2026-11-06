@@ -7,6 +7,6 @@ final themeModeProvider = NotifierProvider<ThemeController, ThemeMode>(
 
 class ThemeController extends Notifier<ThemeMode> {
   @override
-  ThemeMode build() => ThemeMode.dark;
+  ThemeMode build() => ThemeMode.system;
   void setMode(ThemeMode mode) => state = mode;
 }

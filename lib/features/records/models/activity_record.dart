@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
 
 const expenseCategories = [
   'Bakım',
@@ -40,6 +41,16 @@ class ActivityRecord {
   double get amount => amountKurus / 100;
   double? get pricePerLiter => litersMilli > 0 ? amount / liters : null;
   String get title => isFuel ? '$fuelType alımı' : category;
+  Map<String, dynamic> toLocalMap() => {
+    ...toMap(),
+    'date': date.millisecondsSinceEpoch,
+  };
+  factory ActivityRecord.fromLocalMap(String id, Map<String, dynamic> data) =>
+      ActivityRecord.fromMap(id, {
+        ...data,
+        'date': Timestamp.fromMillisecondsSinceEpoch(data['date'] as int),
+      });
+  String get fingerprint => jsonEncode(toLocalMap());
   Map<String, dynamic> toMap() => {
     'kind': kind,
     'date': Timestamp.fromDate(date),

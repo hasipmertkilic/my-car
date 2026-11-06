@@ -73,9 +73,13 @@ void main() {
       await choose(tester, 'Seri', 'E Serisi');
       await choose(tester, 'Model', 'E 250');
       await fill(tester, 'Model yılı', '2015');
-      await fill(tester, 'Plaka', '34 TEST 1');
+      await fill(tester, 'Plaka', '84 ABC 123');
       await fill(tester, 'Motor hacmi (cc)', '1991');
       await fill(tester, 'Güncel kilometre', '120000');
+      await tap(tester, 'Aracı kaydet');
+      expect(repository.vehicles, isEmpty);
+      expect(find.text('Geçerli bir Türkiye plakası gir. Örn. 34 ABC 123.'), findsOneWidget);
+      await fill(tester, 'Plaka', '34abc123');
       await tap(tester, 'Aracı kaydet');
       expect(repository.vehicles.single.brand, 'Mercedes-Benz');
       expect(repository.vehicles.single.model, 'E 250');
@@ -91,7 +95,7 @@ void main() {
           brand: 'Eski marka',
           model: 'Özel model',
           year: 2000,
-          plate: '34 OLD 1',
+          plate: '34 OLD 123',
           fuelType: 'Benzin',
           transmission: 'Manuel',
           currentKm: 100000,

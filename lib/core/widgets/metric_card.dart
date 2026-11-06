@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'package:flutter/material.dart';
 
 class MetricCard extends StatelessWidget {
   const MetricCard({
@@ -11,102 +11,55 @@ class MetricCard extends StatelessWidget {
     this.accent,
   });
   final IconData icon;
-  final String label;
-  final String value;
-  final String detail;
+  final String label, value, detail;
   final Color? accent;
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = accent ?? theme.colorScheme.primary;
+    final t = Theme.of(context);
+    final c = t.colorScheme;
+    final color = accent ?? c.primary;
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              color.withValues(alpha: .13),
-              color.withValues(alpha: .01),
-            ],
-          ),
-        ),
-        child: Stack(
+      child: Padding(
+        padding: const EdgeInsets.all(17),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Positioned(
-              right: -20,
-              top: 44,
-              child: ExcludeSemantics(
-                child: Icon(
-                  icon,
-                  size: 108,
-                  color: color.withValues(alpha: .07),
-                ),
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  height: 4,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [color, color.withValues(alpha: .12)],
+                Expanded(
+                  child: Text(
+                    label,
+                    style: t.textTheme.labelMedium?.copyWith(
+                      color: c.onSurfaceVariant,
+                      height: 1.4,
                     ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: .16),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: color.withValues(alpha: .3),
-                          ),
-                        ),
-                        child: Icon(icon, color: color, size: 25),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        label,
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        value,
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -.6,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        width: 28,
-                        height: 3,
-                        decoration: BoxDecoration(
-                          color: color,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        detail,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                const SizedBox(width: 8),
+                Icon(icon, color: color, size: 18),
               ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              value,
+              style: t.textTheme.headlineSmall?.copyWith(
+                fontSize: 27,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -1.3,
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Divider(),
+            const SizedBox(height: 10),
+            Text(
+              detail,
+              style: t.textTheme.bodySmall?.copyWith(
+                color: c.onSurfaceVariant,
+                fontSize: 11,
+                height: 1.45,
+              ),
             ),
           ],
         ),
@@ -120,13 +73,13 @@ class MetricGrid extends StatelessWidget {
   final List<Widget> children;
   @override
   Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
+    builder: (context, box) {
       if (children.isEmpty) return const SizedBox.shrink();
       final columns = math.min(
         children.length,
-        constraints.maxWidth >= 700
+        box.maxWidth >= 760
             ? 4
-            : constraints.maxWidth >= 340
+            : box.maxWidth >= 340
             ? 2
             : 1,
       );

@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../firebase_options.dart';
@@ -46,6 +47,18 @@ Future<FirebaseAvailability> initializeFirebase() async {
     );
     if (kIsWeb) {
       await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
+      try {
+        FirebaseFirestore.instance.settings = const Settings(
+          persistenceEnabled: true,
+          webPersistentTabManager: WebPersistentMultipleTabManager(),
+        );
+      } catch (_) {
+        // Browsers without persistent storage can still use the current session.
+      }
+    } else {
+      FirebaseFirestore.instance.settings = const Settings(
+        persistenceEnabled: true,
+      );
     }
     return const FirebaseAvailability();
   } catch (error) {

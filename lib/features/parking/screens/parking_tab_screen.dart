@@ -10,8 +10,9 @@ class ParkingTabScreen extends StatelessWidget {
   Widget build(BuildContext context) => VehicleScope(
     builder: (vehicle) => PageContent(
       children: [
-        SectionTitle(
+        PageHeading(
           'Park yerim',
+          eyebrow: 'KALDIĞIN YERDEN',
           subtitle: '${vehicle!.name} • ${vehicle.plate}',
         ),
         ParkingCard(key: ValueKey(vehicle.id), vehicleId: vehicle.id),

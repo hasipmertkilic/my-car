@@ -37,7 +37,11 @@ class StatisticsScreen extends StatelessWidget {
         final largest = max(1, amounts.fold<int>(0, max));
         return PageContent(
           children: [
-            SectionTitle('İstatistikler', subtitle: vehicle.name),
+            PageHeading(
+              'Rakamlarla aracın',
+              eyebrow: 'ANALİZ',
+              subtitle: vehicle.name,
+            ),
             SummaryMetrics(summary: summary),
             const SizedBox(height: 12),
             MetricGrid(

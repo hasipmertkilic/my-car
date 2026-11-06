@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/widgets/page_content.dart';
+import '../../../core/utils/turkish_plate.dart';
 import '../controllers/vehicle_controller.dart';
 import '../models/vehicle.dart';
 import '../repositories/vehicle_repository.dart';
@@ -37,7 +38,9 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
       series = 'Mevcut kayıt';
     }
     year = TextEditingController(text: vehicle?.year.toString());
-    plate = TextEditingController(text: vehicle?.plate);
+    plate = TextEditingController(
+      text: vehicle == null ? '' : TurkishPlate.normalize(vehicle.plate),
+    );
     km = TextEditingController(text: vehicle?.currentKm.toString());
     engine = TextEditingController(text: vehicle?.engineCc.toString());
     fuel = vehicle?.fuelType ?? 'Benzin';
@@ -79,7 +82,7 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
           brand: brand!,
           model: model!,
           year: int.parse(year.text.trim()),
-          plate: plate.text.trim().toUpperCase(),
+          plate: TurkishPlate.normalize(plate.text),
           fuelType: fuel,
           transmission: transmission,
           currentKm: int.parse(km.text.trim()),
@@ -220,15 +223,24 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
                   validator: (value) =>
                       integer(value, 1900, DateTime.now().year + 1),
                 ),
-                field(
-                  'Plaka',
-                  plate,
-                  validator: (value) =>
-                      value == null ||
-                          value.trim().length < 3 ||
-                          value.trim().length > 20
-                      ? '3–20 karakter arasında plaka gir.'
-                      : null,
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: TextFormField(
+                    controller: plate,
+                    enabled: !busy,
+                    textCapitalization: TextCapitalization.characters,
+                    textInputAction: TextInputAction.next,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    inputFormatters: const [TurkishPlateInputFormatter()],
+                    decoration: const InputDecoration(
+                      labelText: 'Plaka',
+                      hintText: '34 ABC 123',
+                      helperText: 'İl kodu • Harfler • Rakamlar',
+                    ),
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: TurkishPlate.validate,
+                  ),
                 ),
                 DropdownButtonFormField<String>(
                   initialValue: fuel,

@@ -193,6 +193,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
       body: PageContent(
         children: [
+          const PageHeading(
+            'Sana özel.',
+            eyebrow: 'HESAP VE TERCİHLER',
+            subtitle: 'Görünümünü, bildirimlerini ve hesabını yönet.',
+          ),
           Card(
             clipBehavior: Clip.antiAlias,
             child: Container(
@@ -368,7 +373,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                       ),
                       Text(
-                        '0.2.28',
+                        '0.6.0',
                         style: theme.textTheme.labelMedium?.copyWith(
                           color: colors.onSurfaceVariant,
                         ),
@@ -395,7 +400,5 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 }
-
-
 
 
